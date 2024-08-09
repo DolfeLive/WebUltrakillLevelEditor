@@ -1,1 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>THREE.js Mouse Drag to Move Object</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+		console.log("loaded");
+        // Initialize scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Create a simple cube
+        const geometry = new THREE.BoxGeometry();
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        // Set camera position
+        camera.position.z = 5;
+
+        // Variables to store mouse positions and state
+        let isDragging = false;
+        let initialMousePosition = new THREE.Vector2();
+        let currentMousePosition = new THREE.Vector2();
+        let dragVector = new THREE.Vector3();
+
+        // Event listeners for mouse actions
+        document.addEventListener('mousedown', onMouseDown, false);
+        document.addEventListener('mousemove', onMouseMove, false);
+        document.addEventListener('mouseup', onMouseUp, false);
+
+        function onMouseDown(event) {
+            isDragging = true;
+            initialMousePosition.set(event.clientX, event.clientY);
+        }
+
+        function onMouseMove(event) {
+            if (isDragging) {
+                currentMousePosition.set(event.clientX, event.clientY);
+                let deltaX = currentMousePosition.x - initialMousePosition.x;
+                let deltaY = currentMousePosition.y - initialMousePosition.y;
+
+                // Map the 2D drag to a 3D vector (e.g., moving along the XZ plane)
+                dragVector.set(deltaX * 0.01, 0, deltaY * 0.01);
+                
+                // Update object position
+                cube.position.add(dragVector);
+
+                // Reset initial position for the next frame
+                initialMousePosition.copy(currentMousePosition);
+            }
+        }
+
+        function onMouseUp(event) {
+            isDragging = false;
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
 

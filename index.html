@@ -9,69 +9,452 @@
     </style>
 </head>
 <body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-		console.log("loaded");
-        // Initialize scene, camera, and renderer
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        // Create a simple cube
-        const geometry = new THREE.BoxGeometry();
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const cube = new THREE.Mesh(geometry, material);
-        scene.add(cube);
-
-        // Set camera position
-        camera.position.z = 5;
-
-        // Variables to store mouse positions and state
-        let isDragging = false;
-        let initialMousePosition = new THREE.Vector2();
-        let currentMousePosition = new THREE.Vector2();
-        let dragVector = new THREE.Vector3();
-
-        // Event listeners for mouse actions
-        document.addEventListener('mousedown', onMouseDown, false);
-        document.addEventListener('mousemove', onMouseMove, false);
-        document.addEventListener('mouseup', onMouseUp, false);
-
-        function onMouseDown(event) {
-            isDragging = true;
-            initialMousePosition.set(event.clientX, event.clientY);
-        }
-
-        function onMouseMove(event) {
-            if (isDragging) {
-                currentMousePosition.set(event.clientX, event.clientY);
-                let deltaX = currentMousePosition.x - initialMousePosition.x;
-                let deltaY = currentMousePosition.y - initialMousePosition.y;
-
-                // Map the 2D drag to a 3D vector (e.g., moving along the XZ plane)
-                dragVector.set(deltaX * 0.01, 0, deltaY * 0.01);
-                
-                // Update object position
-                cube.position.add(dragVector);
-
-                // Reset initial position for the next frame
-                initialMousePosition.copy(currentMousePosition);
-            }
-        }
-
-        function onMouseUp(event) {
-            isDragging = false;
-        }
-
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-        }
-        animate();
-    </script>
-</body>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dat.gui"></script>
+    <script src="./objects.js"></script>
+	
+<script>
+	alert("still in beta no exporting, importing, saving, loading; just f around :D")
+	
+	// { setup } from './saving.js';
+	//setup();
+	
+	// Transition selection with a single object to multiple
+	// Add scale and rotate tool
+	// Make light objects placeable
+	
+	
+	const gui = new GUI({ autoPlace: true });
+	
+	let hierarchy = new GUI({ autoPlace: true });
+	hierarchy.domElement.style.position = 'absolute';
+	hierarchy.domElement.style.left = '0px';
+	hierarchy.domElement.style.top = '0px';
+	
+	let openGUI = [];
+	gui.hide();
+	
+	let objects = [];
+	
+	let selectedObject = null;
+	let boundingBoxes = [];
+	
+	function addBoundBox(obj) {
+	    boundingBoxes.push(obj);
+	}
+	
+	function setSelObj(obj) {
+	    selectedObject = obj;
+	}
+	
+	function closeGUIs() {
+	    openGUI.forEach((openUI) => {
+		openUI.close();
+		openGUI.pop();
+		gui.removeFolder(openUI);
+	    });
+	    gui.hide();
+	}
+	
+	const scene = new THREE.Scene();
+	const color = 0x808080;
+	scene.background = new THREE.Color(color);
+	const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000000);
+	const renderer = new THREE.WebGLRenderer();
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	document.body.appendChild(renderer.domElement);
+	camera.position.set(5, 5, 5);
+	
+	const controls = new OrbitControls(camera, renderer.domElement);
+	controls.target.set(0, 0, 0);
+	controls.mouseButtons.MIDDLE = null;
+	controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN;
+	
+	
+	var ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+	scene.add(ambientLight);
+	
+	let gridSize = 500;
+	const gridHelper = new THREE.GridHelper(gridSize, gridSize);
+	scene.add(gridHelper);
+	gridHelper.position.set(0, -0.5, 0);
+	
+	const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+	directionalLight.position.set(1, 1, 1).normalize();
+	directionalLight.name = "IGNORE:DirLight";
+	scene.add(directionalLight);
+	
+	const ObjectCreator = {
+	    addCube: function () {
+		const size = 1;
+		const color = 0x0000ff;
+		const position = { x: 0, y: 0, z: 0 };
+	
+		const cube = new Cube(size, color, position, "New Cube", objects);
+	
+		cube.addToScene(scene);
+	
+		//cube.onClick();
+		//BuildHierarchy();
+	    },
+	    addSphere: function () {
+		const size = 1;
+		const color = 0x0000ff;
+		const position = { x: 0, y: 0, z: 0 };
+	
+	
+		const sphere = new Sphere(size, color, position, "New Sphere", objects)
+	
+		sphere.addToScene(scene);
+	    }
+	};
+	
+	const CreateMenu = hierarchy.addFolder("Create Object");
+	CreateMenu.add(ObjectCreator, 'addCube').name("Add Cube");
+	CreateMenu.add(ObjectCreator, 'addSphere').name("Add Sphere");
+	
+	// const cube = new Cube(1, 0x000000, { x: 0, y: 0, z: 0 }, "cube", objects);
+	// cube.addToScene(scene);
+	
+	let object, arrows = [];
+	
+	const geometry1 = new THREE.BoxGeometry();
+	const material1 = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+	object = new THREE.Mesh(geometry1, material1);
+	
+	function ArrowTest(object) {
+	    const clickedArrow = arrows.find(arrow => arrow.line === object);
+	    if (clickedArrow) {
+		//console.log("Arrow direction:", clickedArrow.direction);
+		const dir = clickedArrow.userData.direction;
+		if (dir.equals(new THREE.Vector3(1, 0, 0))) {
+		    //console.log(Right, ${isMouseOverRenderer});
+		    return "x";
+		} else if (dir.equals(new THREE.Vector3(0, 1, 0))) {
+		    //console.log("Up");
+		    return "y";
+		} else if (dir.equals(new THREE.Vector3(0, 0, 1))) {
+		    //console.log("Towards Left");
+		    return "z";
+		}
+		return null;
+	    }
+	}
+	
+	controls.update();
+	
+	let PressedDownKeys = [];
+	
+	function GetKeyDown(key) {
+	    return PressedDownKeys.includes(key);
+	}
+	
+	window.addEventListener('mousemove', onMouseMove, false);
+	
+	let previousHoveredArrow;
+	
+	function onMouseMove(event) {
+	    event.preventDefault();
+	    updateMousePosition(event);
+	    raycaster.setFromCamera(mouse, camera);
+	    const intersects = raycaster.intersectObjects(arrows.map(arrow => arrow.line));
+	
+	    if (intersects.length > 0) {
+		hoveredArrow = intersects[0].object;
+		hoveredAxis = ArrowTest(hoveredArrow);
+	
+		if (rightClickDown) movingObject = true;
+	
+		if (hoveredArrow.material.color.getHex() !== 0xFFFFFF) {
+		    if (previousHoveredArrow && previousHoveredArrow !== hoveredArrow) {
+			previousHoveredArrow.material.color.set(previousHoveredArrow.userData.originalColor || 0xFFFFFF);
+		    }
+		    if (!hoveredArrow.userData.originalColor) {
+			hoveredArrow.userData.originalColor = hoveredArrow.material.color.getHex();
+		    }
+		    hoveredArrow.material.color.set(0xFFFFFF);
+		}
+	    } else if (!rightClickDown) {
+		if (previousHoveredArrow) {
+		    previousHoveredArrow.material.color.set(previousHoveredArrow.userData.originalColor || 0xFFFFFF);
+		    previousHoveredArrow = null;
+		}
+	
+		movingObject = false;
+		grabbedAxis = null;
+	    }
+	
+	    if (hoveredArrow !== previousHoveredArrow) {
+		previousHoveredArrow = hoveredArrow;
+	    }
+	
+	    if (selectedObject != null && transArrow == null) {
+		transArrow = new TranslateArrows(selectedObject);
+	    }
+	
+	    selecteds.forEach((obj) => {
+		if (grabbedAxis && rightClickDown && selectedObject) {
+		    const deltaX = event.movementX;
+		    const deltaY = event.movementY;
+	
+		    const worldAxes = {
+			x: new THREE.Vector3(1, 0, 0), //0xFF0000
+			y: new THREE.Vector3(0, 1, 0), //0x00FF00
+			z: new THREE.Vector3(0, 0, 1)  //0x0000FF
+		    };
+	
+		    const movementAxis = worldAxes[grabbedAxis].clone();
+	
+		    const axisScreenProjection = movementAxis.clone().project(camera);
+	
+		    const movementAmount = (axisScreenProjection.x * deltaX + axisScreenProjection.y * -deltaY) * 0.05;
+	
+		    obj.position.add(movementAxis.multiplyScalar(movementAmount));
+		    //obj.updFolder();
+		    transArrow.arrows.forEach(arrow => {
+			arrow.position.copy(selectedObject.position)
+		    });
+		    //console.log(obj)
+		    obj.updateLine();
+		    //transArrow.copyPosition(selectedObject);
+		}
+	    })
+	
+	}
+	function updateMousePosition(event) {
+	    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+	    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+	    raycaster.setFromCamera(mouse, camera);
+	}
+	
+	document.addEventListener('keyup', (event) => {
+	    const keyName = event.key;
+	    PressedDownKeys.pop(keyName);
+	});
+	
+	document.addEventListener('keydown', (event) => {
+	    const keyName = event.key;
+	    //console.log(You pressed the "${keyName}" key);
+	    PressedDownKeys.push(keyName);
+	    if (keyName == "f" && selectedObject != null) {
+		console.log(selectedObject.position);
+		const { x, y, z } = selectedObject.position;
+	
+		if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+		    controls.target.set(x, y, z);
+		    controls.update();
+		}
+		else {
+		    console.error('Transform contains NaN values:', selectedObject.transform);
+		}
+	    }
+	    if (keyName == "Delete") {
+		console.log("deleted object: " + selectedObject);
+		selectedObject.movArrows.deleteArrows();
+		if (selecteds > 0) {
+		    selecteds.forEach((obj) => {
+	
+			scene.remove(obj.selectLine);
+			scene.remove(obj);
+		    });
+		}
+		else {
+		    scene.remove(selectedObject);
+		    scene.remove(selectedObject.selectLine);
+		}
+	
+		boundingBoxes.forEach((bound) => {
+		    scene.remove(bound);
+		});
+		boundingBoxes = [];
+	
+	
+	    }
+	    if (keyName == "g" || keyName == "G") {
+		console.log(selectedObject);
+	    }
+	});
+	
+	var raycaster = new THREE.Raycaster();
+	var mouse = new THREE.Vector2();
+	
+	let width = 0;
+	let height = 0;
+	let intersects = [];
+	
+	width = window.innerWidth;
+	height = window.innerHeight;
+	let isMouseOverRenderer = false;
+	
+	renderer.domElement.addEventListener('mouseenter', () => {
+	    isMouseOverRenderer = true;
+	});
+	
+	renderer.domElement.addEventListener('mouseleave', () => {
+	    isMouseOverRenderer = false;
+	});
+	
+	window.addEventListener('pointermove', (e) => {
+	    mouse.x = (e.clientX / width) * 2 - 1;
+	    mouse.y = -(e.clientY / height) * 2 + 1;
+	});
+	
+	var mouseDown = [0, 0, 0, 0, 0, 0, 0, 0, 0],
+	    mouseDownCount = 0;
+	document.body.onmousedown = function (evt) {
+	    ++mouseDown[evt.button];
+	    ++mouseDownCount;
+	    if (evt.button === 0 && hoveredArrow != null) {
+	
+		hoveredArrow.material.color.set(0xFFFFFF);
+	
+		grabbedAxis = hoveredAxis;
+		rightClickDown = true;
+	    }
+	}
+	document.body.onmouseup = function (evt) {
+	    --mouseDown[evt.button];
+	    --mouseDownCount;
+	    if (evt.button === 0) {
+		grabbedAxis = hoveredAxis;
+		rightClickDown = false;
+	    }
+	}
+	
+	let selecteds = [];
+	
+	let movingObject;
+	
+	function print(message){
+	    console.log(message)
+	}
+	window.addEventListener('click', (e) => {
+	    e.preventDefault();
+	
+	    if (movingObject)
+	    {
+		controls.enableRotate = false;
+		return
+	    }
+	    else
+	    {
+		controls.enableRotate = true;
+		hoveredAxis = null;
+	    }
+	    if (isMouseOverRenderer) {
+		raycaster.setFromCamera(mouse, camera);
+		intersects = raycaster.intersectObjects(scene.children, true);
+		intersects = intersects.filter(intersect => !arrows.some(arrow => arrow.line === intersect.object));
+		intersects = intersects.filter(intersect => intersect.object !== gridHelper);
+	
+		if (selectedObject != null && selectedObject.movArrows) {
+		    selectedObject.movArrows.deleteArrows();
+		}
+	
+		if (intersects.length > 0) {
+		    let hitObject = intersects[0];
+		    intersects.forEach((hit) => {
+			if (hit === hitObject && hit.object.userData.onClick && !rightClickDown) {
+			    if (PressedDownKeys.includes("Shift") && false != false) {
+	
+				console.log("selecting with shift");
+	
+				selecteds.push(hit.object);
+				selecteds.forEach(obj => {
+				    obj.userData.makeLine();
+				});
+	
+	
+			    }
+			    else {
+				boundingBoxes.forEach((bound) => {
+				    scene.remove(bound);
+				});
+	
+				hit.object.userData.onClick(event);
+				for (var i = 0; i < selecteds.length; i++) {
+				    selecteds.pop();
+	
+				}
+				selectedObject = hit.object;
+	
+				selecteds.push(selectedObject);
+	
+				transArrow = new TranslateArrows(selectedObject);
+			    }
+			}
+		    });
+		}
+		else {
+		    if (rightClickDown || GetKeyDown("Alt")) {
+			return;
+		    }
+		    closeGUIs();
+		    boundingBoxes.forEach((bound) => {
+			scene.remove(bound);
+		    });
+		    boundingBoxes = [];
+		    if (selectedObject) {
+			selectedObject.movArrows.deleteArrows();
+			scene.remove(selectedObject.selectLine);
+			selectedObject = null;
+		    }
+		    for (let index = 0; index < selecteds.length; index++) {
+			selecteds = [];
+		    }
+		}
+	    }
+	    else
+		console.log("Mouse not over renderer");
+	});
+	
+	let transArrow = null;
+	function animate() {
+	    
+	    if (grabbedAxis != null && rightClickDown) {
+		controls.enableRotate = false;
+	    } else {
+		controls.enableRotate = true;
+	    }
+	
+	    if (selectedObject == null && !rightClickDown) {
+		scene.remove(transArrow);
+	    }
+	    renderer.render(scene, camera);
+	    controls.update();
+	}
+	let hoveredArrow;
+	let hoveredAxis;
+	let grabbedAxis = null;
+	let rightClickDown = false;
+	let lastMousePosition = new THREE.Vector2();
+	
+	renderer.setAnimationLoop(animate);
+	let leftClickDown;
+	
+	window.addEventListener('resize', function () {
+	    camera.aspect = window.innerWidth / window.innerHeight;
+	    camera.updateProjectionMatrix();
+	    renderer.setSize(window.innerWidth, window.innerHeight);
+	});
+	
+	function averagePosition(vectors) {
+	    const sum = new THREE.Vector3();
+	
+	    for (const vector of vectors) {
+		sum.add(vector);
+	    }
+	
+	    const average = sum.divideScalar(vectors.length);
+	
+	    return average;
+	}
+	
+	export { gui, objects, hierarchy, openGUI, closeGUIs, selectedObject, setSelObj, addBoundBox, scene, object, arrows, transArrow, boundingBoxes, selecteds };
+	
+	//test
+	</script>
+  </body>
 </html>
 
